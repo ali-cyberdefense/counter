@@ -208,6 +208,10 @@
 
         .celebration-content {
             text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
             animation: popIn 0.4s ease;
         }
 
@@ -359,6 +363,10 @@
 
         document.getElementById('btnContinue').addEventListener('click', () => {
             celebration.classList.remove('show');
+            count = 0;
+            celebrated = false;
+            save();
+            render();
         });
 
         function checkCelebration(wasCelebrated) {
