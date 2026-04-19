@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#1a1a2e">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Zikr">
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="icon-192.png">
+    <title>Zikr Counter</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+            user-select: none;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+            background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+            color: #fff;
+            height: 100dvh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+
+        .target-bar {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            padding: 16px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+        }
+
+        .target-bar label {
+            font-size: 14px;
+            color: rgba(255, 255, 255, 0.6);
+            letter-spacing: 0.5px;
+        }
+
+        .target-select {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            color: #fff;
+            padding: 6px 12px;
+            border-radius: 8px;
+            font-size: 14px;
+            outline: none;
+            cursor: pointer;
+        }
+
+        .target-select option {
+            background: #302b63;
+            color: #fff;
+        }
+
+        .counter-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .count-display {
+            font-size: clamp(80px, 20vw, 140px);
+            font-weight: 700;
+            letter-spacing: -2px;
+            background: linear-gradient(135deg, #e2b0ff, #9b59b6, #667eea);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            line-height: 1;
+            transition: transform 0.1s ease;
+        }
+
+        .count-display.bump {
+            transform: scale(1.08);
+        }
+
+        .progress-text {
+            font-size: 16px;
+            color: rgba(255, 255, 255, 0.45);
+            letter-spacing: 1px;
+        }
+
+        .progress-ring-container {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .progress-ring circle {
+            fill: none;
+        }
+
+        .progress-ring .ring-bg {
+            stroke: rgba(255, 255, 255, 0.06);
+        }
+
+        .progress-ring .ring-fill {
+            stroke: url(#gradient);
+            stroke-linecap: round;
+            transition: stroke-dashoffset 0.35s ease;
+        }
+
+        .controls {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            padding: 30px 20px;
+            padding-bottom: max(30px, env(safe-area-inset-bottom));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 24px;
+        }
+
+        .btn {
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: transform 0.15s ease, box-shadow 0.15s ease;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .btn:active {
+            transform: scale(0.92);
+        }
+
+        .btn-main {
+            width: 88px;
+            height: 88px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            box-shadow: 0 8px 32px rgba(102, 126, 234, 0.4);
+            font-size: 42px;
+            color: #fff;
+        }
+
+        .btn-main:active {
+            box-shadow: 0 4px 16px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn-secondary {
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            font-size: 22px;
+            color: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(10px);
+        }
+
+        .btn-reset {
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            color: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(10px);
+        }
+
+        .btn-reset svg {
+            width: 22px;
+            height: 22px;
+        }
+
+        /* Target reached celebration */
+        .celebration {
+            position: fixed;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(8px);
+            z-index: 100;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+
+        .celebration.show {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .celebration-content {
+            text-align: center;
+            animation: popIn 0.4s ease;
+        }
+
+        .celebration-content h2 {
+            font-size: 28px;
+            margin-bottom: 8px;
+            background: linear-gradient(135deg, #f7971e, #ffd200);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .celebration-content p {
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 16px;
+            margin-bottom: 24px;
+        }
+
+        .celebration .btn-continue {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: #fff;
+            border: none;
+            padding: 12px 32px;
+            border-radius: 12px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+
+        @keyframes popIn {
+            0% { transform: scale(0.8); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        /* Haptic ripple */
+        .ripple {
+            position: absolute;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.15);
+            animation: rippleAnim 0.5s ease-out forwards;
+            pointer-events: none;
+        }
+
+        @keyframes rippleAnim {
+            to { transform: scale(3); opacity: 0; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="target-bar">
+        <label>Target</label>
+        <select class="target-select" id="targetSelect">
+            <option value="0">None</option>
+            <option value="33">33</option>
+            <option value="99">99</option>
+            <option value="100" selected>100</option>
+            <option value="200">200</option>
+            <option value="300">300</option>
+            <option value="500">500</option>
+            <option value="1000">1000</option>
+        </select>
+    </div>
+
+    <svg class="progress-ring-container" width="320" height="320">
+        <defs>
+            <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="#667eea" />
+                <stop offset="100%" stop-color="#e2b0ff" />
+            </linearGradient>
+        </defs>
+        <circle class="ring-bg" cx="160" cy="160" r="145" stroke-width="6" fill="none" stroke="rgba(255,255,255,0.06)"/>
+        <circle class="ring-fill" id="progressRing" cx="160" cy="160" r="145" stroke-width="6" fill="none"
+            stroke="url(#gradient)" stroke-linecap="round"
+            stroke-dasharray="911.06" stroke-dashoffset="911.06"
+            transform="rotate(-90 160 160)"/>
+    </svg>
+
+    <div class="counter-container" style="position: relative; z-index: 1;">
+        <div class="count-display" id="countDisplay">0</div>
+        <div class="progress-text" id="progressText">0 / 100</div>
+    </div>
+
+    <div class="controls">
+        <button class="btn btn-secondary" id="btnMinus" aria-label="Decrease">−</button>
+        <button class="btn btn-main" id="btnPlus" aria-label="Increase">+</button>
+        <button class="btn btn-reset" id="btnReset" aria-label="Reset">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M3 12a9 9 0 1 1 3.5 7.1"/>
+                <polyline points="1 16 3.5 19.1 6.5 16.5"/>
+            </svg>
+        </button>
+    </div>
+
+    <div class="celebration" id="celebration">
+        <div class="celebration-content">
+            <h2>Alhamdulillah!</h2>
+            <p>You have completed your target</p>
+            <button class="btn btn-continue" id="btnContinue">Continue</button>
+        </div>
+    </div>
+
+    <script>
+        const countDisplay = document.getElementById('countDisplay');
+        const progressText = document.getElementById('progressText');
+        const progressRing = document.getElementById('progressRing');
+        const targetSelect = document.getElementById('targetSelect');
+        const celebration = document.getElementById('celebration');
+        const circumference = 2 * Math.PI * 145;
+
+        let count = parseInt(localStorage.getItem('zikr_count') || '0');
+        let target = parseInt(localStorage.getItem('zikr_target') || '100');
+        let celebrated = localStorage.getItem('zikr_celebrated') === 'true';
+
+        targetSelect.value = target;
+        render();
+
+        document.getElementById('btnPlus').addEventListener('click', () => {
+            count++;
+            celebrated = checkCelebration(celebrated);
+            save();
+            render();
+            bump();
+            vibrate();
+        });
+
+        document.getElementById('btnMinus').addEventListener('click', () => {
+            if (count > 0) {
+                count--;
+                celebrated = false;
+                save();
+                render();
+            }
+        });
+
+        document.getElementById('btnReset').addEventListener('click', () => {
+            count = 0;
+            celebrated = false;
+            save();
+            render();
+        });
+
+        targetSelect.addEventListener('change', () => {
+            target = parseInt(targetSelect.value);
+            celebrated = false;
+            localStorage.setItem('zikr_target', target);
+            localStorage.setItem('zikr_celebrated', 'false');
+            render();
+        });
+
+        document.getElementById('btnContinue').addEventListener('click', () => {
+            celebration.classList.remove('show');
+        });
+
+        function checkCelebration(wasCelebrated) {
+            if (target > 0 && count >= target && !wasCelebrated) {
+                celebration.classList.add('show');
+                return true;
+            }
+            return wasCelebrated;
+        }
+
+        function save() {
+            localStorage.setItem('zikr_count', count);
+            localStorage.setItem('zikr_celebrated', celebrated);
+        }
+
+        function render() {
+            countDisplay.textContent = count;
+
+            if (target > 0) {
+                progressText.textContent = `${count} / ${target}`;
+                const progress = Math.min(count / target, 1);
+                const offset = circumference - (progress * circumference);
+                progressRing.style.strokeDashoffset = offset;
+            } else {
+                progressText.textContent = count;
+                progressRing.style.strokeDashoffset = circumference;
+            }
+        }
+
+        function bump() {
+            countDisplay.classList.add('bump');
+            setTimeout(() => countDisplay.classList.remove('bump'), 100);
+        }
+
+        function vibrate() {
+            if (navigator.vibrate) navigator.vibrate(20);
+        }
+
+        // Register service worker for offline support
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('sw.js');
+        }
+    </script>
+</body>
+</html>
